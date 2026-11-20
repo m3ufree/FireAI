@@ -89,17 +89,27 @@ fireai/
 
 ## Скачивание готовых сборок
 
-Готовые файлы — в [Releases](https://github.com/m3ufree/FireAI/releases):
+Готовые файлы лежат прямо в репозитории в папке [releases/v1.0.0](https://github.com/m3ufree/FireAI/tree/main/releases/v1.0.0):
 
-- `FireAI-win-x64.exe` — Windows: один файл-приложение, сервер и интерфейс внутри. Запустите двойным кликом и откройте http://localhost:3000 (порт можно изменить: `set PORT=8080 && FireAI.exe`; ключ LLM — переменная окружения `FIREAI_API_KEY`).
-- `FireAI-linux-x64` — Linux: `chmod +x FireAI-linux-x64 && ./FireAI-linux-x64`.
-- `FireAI.apk` — Android: работает офлайн (демо-режим: 3D-игра, песни, код). В меню (☰) можно указать адрес своего сервера FireAI, чтобы общаться через настоящий LLM.
+| Файл | Как распаковать / использовать |
+| --- | --- |
+| `FireAI-win-x64.exe.gz` | Windows: скачайте и распакуйте (.gz распаковывается 7-Zip или командой `gunzip`), затем запустите EXE двойным кликом → откройте http://localhost:3000 |
+| `FireAI-linux-x64.gz` | Linux: `gunzip FireAI-linux-x64.gz && chmod +x FireAI-linux-x64 && ./FireAI-linux-x64` |
+| `FireAI.apk` | Android: разрешите установку из источника, установите, откройте FireAI |
+
+Порт: `set PORT=8080` (Windows) или `PORT=8080` (Linux) перед запуском. Ключ LLM — переменная окружения `FIREAI_API_KEY` (подходят Mistral, OpenAI, OpenRouter, Ollama).
+
+APK работает офлайн в демо-режиме (3D-игра, песни, код). В меню (☰) укажите адрес своего сервера FireAI — и бот будет отвечать через настоящий LLM.
 
 ## Сборка EXE и APK из исходников
 
 ```bash
-# EXE (Linux/macOS):
+# EXE (Linux/macOS, нужен интернет):
 npm install && npm run build:exe
-# нужен JAVA_HOME/JDK 17 и Android SDK (sdk/build-tools, sdk/platforms/android-34)
-mobile/build-apk.sh   # соберёт FireAI.apk
+# → build/FireAI-win-x64.exe и build/FireAI-linux-x64
+
+# APK (нужен JDK 17 и Android SDK: build-tools 34, platform android-34):
+export JAVA_HOME=/путь/к/jdk17
+SDK=/путь/к/android-sdk ./mobile/build-apk.sh
+# → FireAI.apk (подписан, готов к установке)
 ```
