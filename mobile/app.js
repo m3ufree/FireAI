@@ -1,6 +1,21 @@
 /* FireAI mobile — офлайн-движок + опциональный сервер. */
 (() => {
   const el = (id) => document.getElementById(id);
+  const storage = (() => {
+    try {
+      const t = "__fireai_test";
+      storage.setItem(t, t);
+      storage.removeItem(t);
+      return localStorage;
+    } catch (_) {
+      const mem = new Map();
+      return {
+        getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+        setItem: (k, v) => mem.set(k, String(v)),
+        removeItem: (k) => mem.delete(k),
+      };
+    }
+  })();
   const $messages = el('messages');
   const $welcome = el('welcome');
   const $scroller = el('scroller');
@@ -11,12 +26,12 @@
   const $sidebar = document.querySelector('.sidebar');
   const $serverUrl = el('serverUrl');
 
-  let SERVER = localStorage.getItem('fireai.server') || '';
+  let SERVER = storage.getItem('fireai.server') || '';
   $serverUrl.value = SERVER;
 
   el('saveServer').onclick = () => {
     SERVER = $serverUrl.value.trim().replace(/\/+$/, '');
-    localStorage.setItem('fireai.server', SERVER);
+    storage.setItem('fireai.server', SERVER);
     renderBadge();
     $sidebar.classList.add('collapsed');
   };
@@ -35,19 +50,19 @@
   const LS_CHATS = 'fireai.chats.v1';
   const LS_CURRENT = 'fireai.current.v1';
   let chats = load();
-  let currentId = localStorage.getItem(LS_CURRENT);
+  let currentId = storage.getItem(LS_CURRENT);
 
   function load() {
     try {
-      const p = JSON.parse(localStorage.getItem(LS_CHATS));
+      const p = JSON.parse(storage.getItem(LS_CHATS));
       return Array.isArray(p) ? p : [];
     } catch (_) {
       return [];
     }
   }
   const save = () => {
-    localStorage.setItem(LS_CHATS, JSON.stringify(chats));
-    localStorage.setItem(LS_CURRENT, currentId || '');
+    storage.setItem(LS_CHATS, JSON.stringify(chats));
+    storage.setItem(LS_CURRENT, currentId || '');
   };
   const currentChat = () => chats.find((c) => c.id === currentId) || null;
 
@@ -112,7 +127,7 @@
     root.querySelectorAll('.copy-btn').forEach((btn) => {
       btn.onclick = () => {
         const code = btn.closest('.codeblock').querySelector('pre').textContent;
-        navigator.clipboard && navigator.clipboard.writeText(code);
+        try { navigator.clipboard && navigator.clipboard.writeText(code); } catch (_) {}
         btn.textContent = '✓';
         setTimeout(() => (btn.textContent = 'Копировать'), 1200);
       };

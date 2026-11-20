@@ -1,6 +1,21 @@
-/* FireAI — клиент. Стриминг через SSE, история чатов в localStorage. */
+/* FireAI — клиент. Стриминг через SSE, история чатов в storage. */
 (() => {
   const el = (id) => document.getElementById(id);
+  const storage = (() => {
+    try {
+      const t = "__fireai_test";
+      storage.setItem(t, t);
+      storage.removeItem(t);
+      return localStorage;
+    } catch (_) {
+      const mem = new Map();
+      return {
+        getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+        setItem: (k, v) => mem.set(k, String(v)),
+        removeItem: (k) => mem.delete(k),
+      };
+    }
+  })();
   const $messages = el('messages');
   const $welcome = el('welcome');
   const $scroller = el('scroller');
@@ -14,19 +29,19 @@
   const LS_CURRENT = 'fireai.current.v1';
 
   let chats = load();
-  let currentId = localStorage.getItem(LS_CURRENT);
+  let currentId = storage.getItem(LS_CURRENT);
 
   function load() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(LS_CHATS));
+      const parsed = JSON.parse(storage.getItem(LS_CHATS));
       return Array.isArray(parsed) ? parsed : [];
     } catch (_) {
       return [];
     }
   }
   const save = () => {
-    localStorage.setItem(LS_CHATS, JSON.stringify(chats));
-    localStorage.setItem(LS_CURRENT, currentId || '');
+    storage.setItem(LS_CHATS, JSON.stringify(chats));
+    storage.setItem(LS_CURRENT, currentId || '');
   };
 
   function currentChat() {
