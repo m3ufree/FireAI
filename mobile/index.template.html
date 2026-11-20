@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>FireAI</title>
+<style>
+{{STYLE}}
+.server-setting { display: flex; gap: 6px; margin-top: 10px; }
+.server-setting input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+  outline: none;
+}
+</style>
+</head>
+<body>
+<aside class="sidebar collapsed">
+  <div class="brand"><span class="brand-icon">🔥</span><span class="brand-name">FireAI</span></div>
+  <button id="newChat" class="new-chat">＋ Новый чат</button>
+  <nav id="chatList" class="chat-list"></nav>
+  <div class="sidebar-footer">
+    <span id="modeBadge" class="mode-badge demo">офлайн · демо</span>
+    <div class="server-setting">
+      <input id="serverUrl" type="url" placeholder="URL сервера (необязательно)">
+      <button id="saveServer" class="copy-btn">Сохр.</button>
+    </div>
+  </div>
+</aside>
+
+<main class="chat-main">
+  <header class="topbar">
+    <button id="toggleSidebar" class="icon-btn" title="Меню">☰</button>
+    <div class="topbar-title">FireAI <span class="topbar-sub">умный · 3D · код · песни</span></div>
+  </header>
+
+  <div id="scroller" class="scroller">
+    <div id="welcome" class="welcome">
+      <div class="welcome-logo">🔥</div>
+      <h1>Привет, я FireAI</h1>
+      <p>Пишу 3D-игры, программирую и сочиняю песни — работает даже без интернета.</p>
+      <div class="suggestions">
+        <button class="suggestion" data-prompt="Сделай 3D игру одним HTML-файлом">🎮 Сделай 3D игру</button>
+        <button class="suggestion" data-prompt="Напиши песню огонь в проводах">🎵 Напиши песню</button>
+        <button class="suggestion" data-prompt="Напиши код на python для суммы чисел">💻 Код на Python</button>
+        <button class="suggestion" data-prompt="Что ты умеешь?">🧠 Что ты умеешь?</button>
+      </div>
+    </div>
+    <div id="messages"></div>
+  </div>
+
+  <footer class="composer-wrap">
+    <div class="composer">
+      <textarea id="input" rows="1" placeholder="Сообщение…"></textarea>
+      <button id="send" class="send-btn" title="Отправить">➤</button>
+    </div>
+    <div class="disclaimer">FireAI может ошибаться. Проверяйте важную информацию.</div>
+  </footer>
+</main>
+
+<script>
+{{ENGINE}}
+</script>
+<script>
+{{APP}}
+</script>
+</body>
+</html>

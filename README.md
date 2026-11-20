@@ -86,3 +86,20 @@ fireai/
 ```
 
 Замечание: `.env` загружается автоматически, если установлен пакет `dotenv`, либо переменные можно передать напрямую: `FIREAI_API_KEY=... npm start`.
+
+## Скачивание готовых сборок
+
+Готовые файлы — в [Releases](https://github.com/m3ufree/FireAI/releases):
+
+- `FireAI-win-x64.exe` — Windows: один файл-приложение, сервер и интерфейс внутри. Запустите двойным кликом и откройте http://localhost:3000 (порт можно изменить: `set PORT=8080 && FireAI.exe`; ключ LLM — переменная окружения `FIREAI_API_KEY`).
+- `FireAI-linux-x64` — Linux: `chmod +x FireAI-linux-x64 && ./FireAI-linux-x64`.
+- `FireAI.apk` — Android: работает офлайн (демо-режим: 3D-игра, песни, код). В меню (☰) можно указать адрес своего сервера FireAI, чтобы общаться через настоящий LLM.
+
+## Сборка EXE и APK из исходников
+
+```bash
+# EXE (Linux/macOS):
+npm install && npm run build:exe
+# нужен JAVA_HOME/JDK 17 и Android SDK (sdk/build-tools, sdk/platforms/android-34)
+mobile/build-apk.sh   # соберёт FireAI.apk
+```

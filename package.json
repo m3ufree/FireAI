@@ -6,7 +6,9 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node --watch server/index.js"
+    "dev": "node --watch server/index.js",
+    "build:exe": "bash build-exe.sh",
+    "build:mobile": "node mobile/tools/build-assets.js"
   },
   "engines": {
     "node": ">=18"
