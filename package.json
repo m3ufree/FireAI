@@ -1,0 +1,17 @@
+{
+  "name": "fireai",
+  "version": "1.0.0",
+  "description": "FireAI — умный чат-бот с интерфейсом в стиле DeepSeek и собственным API",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

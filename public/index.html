@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FireAI — умный ИИ-бот</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🔥</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand"><span class="brand-icon">🔥</span><span class="brand-name">FireAI</span></div>
+  <button id="newChat" class="new-chat">＋ Новый чат</button>
+  <nav id="chatList" class="chat-list"></nav>
+  <div class="sidebar-footer">
+    <span id="modeBadge" class="mode-badge">…</span>
+  </div>
+</aside>
+
+<main class="chat-main">
+  <header class="topbar">
+    <button id="toggleSidebar" class="icon-btn" title="Меню">☰</button>
+    <div class="topbar-title">FireAI <span class="topbar-sub">умный · 3D · код · песни</span></div>
+  </header>
+
+  <div id="scroller" class="scroller">
+    <div id="welcome" class="welcome">
+      <div class="welcome-logo">🔥</div>
+      <h1>Привет, я FireAI</h1>
+      <p>Я очень умный: пишу 3D-игры и модели, программирую на всех языках и сочиняю песни. С чего начнём?</p>
+      <div class="suggestions">
+        <button class="suggestion" data-prompt="Сделай 3D игру одним HTML-файлом">🎮 Сделай 3D игру</button>
+        <button class="suggestion" data-prompt="Напиши песню огонь в проводах">🎵 Напиши песню</button>
+        <button class="suggestion" data-prompt="Напиши код на python для суммы чисел">💻 Код на Python</button>
+        <button class="suggestion" data-prompt="Что ты умеешь?">🧠 Что ты умеешь?</button>
+      </div>
+    </div>
+    <div id="messages"></div>
+  </div>
+
+  <footer class="composer-wrap">
+    <div class="composer">
+      <textarea id="input" rows="1" placeholder="Спроси FireAI о чём угодно… (Enter — отправить, Shift+Enter — перенос строки)"></textarea>
+      <button id="send" class="send-btn" title="Отправить">➤</button>
+    </div>
+    <div class="disclaimer">FireAI может ошибаться. Проверяйте важную информацию.</div>
+  </footer>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
