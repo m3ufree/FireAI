@@ -62,11 +62,17 @@ async function* upstreamStream(messages) {
   }
 }
 
-async function* demoStream(answer) {
-  const tokens = answer.match(/\s*\S+/g) || [answer];
-  for (const token of tokens) {
-    yield token;
-    await new Promise((r) => setTimeout(r, 10));
+async function* answerStream(messages) {
+  if (isDemo()) {
+    const { generate } = require('./demo-engine');
+    const text = generate(messages);
+    const tokens = text.match(/\s*\S+/g) || [text];
+    for (const token of tokens) {
+      await new Promise((r) => setTimeout(r, 10));
+      yield token;
+    }
+  } else {
+    for await (const token of upstreamStream(toUpstreamMessages(messages))) yield token;
   }
 }
 
@@ -88,14 +94,7 @@ async function streamChat(res, messages) {
   sseWrite(res, 'meta', { model: isDemo() ? 'fireai-demo' : MODEL, mode: isDemo() ? 'demo' : 'live' });
 
   try {
-    if (isDemo()) {
-      const { generate } = require('./demo-engine');
-      for await (const token of demoStream(generate(messages))) sseWrite(res, 'delta', { content: token });
-    } else {
-      for await (const token of upstreamStream(toUpstreamMessages(messages))) {
-        sseWrite(res, 'delta', { content: token });
-      }
-    }
+    for await (const token of answerStream(messages)) sseWrite(res, 'delta', { content: token });
     sseWrite(res, 'done', { finish: 'stop' });
   } catch (err) {
     sseWrite(res, 'error', { message: String((err && err.message) || err) });
@@ -103,4 +102,4 @@ async function streamChat(res, messages) {
   res.end();
 }
 
-module.exports = { BASE_URL, ACCESS_TOKEN, MODEL, isDemo, streamChat };
+module.exports = { BASE_URL, ACCESS_TOKEN, MODEL, isDemo, streamChat, answerStream, SYSTEM_PROMPT };

@@ -48,18 +48,26 @@ FIREAI_MODEL=llama3.1
 FIREAI_API_KEY=ollama
 ```
 
-## Собственный API FireAI
+## Собственный API FireAI (v1)
 
-После запуска FireAI сам становится OpenAI-совместимым сервером:
+FireAI — сам OpenAI-совместимый сервер. Ключ создаётся на странице `http://localhost:3000/api.html` после входа в аккаунт.
 
-```bash
-curl http://localhost:3000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Привет!"}]}'
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:3000/v1", api_key="sk-fireai-ВАШ_КЛЮЧ")
+
+r = client.chat.completions.create(
+    model="fireai-demo",
+    messages=[{"role": "user", "content": "Привет"}],
+)
+print(r.choices[0].message.content)
 ```
 
-Если задан `FIREAI_ACCESS_TOKEN`, добавьте заголовок `Authorization: Bearer <токен>`.
-
+Поддерживается:
+- `POST /v1/chat/completions` — обычный ответ и SSE-стриминг (`"stream": true`) в формате OpenAI;
+- `GET /v1/models` — список моделей;
+- ключи `sk-fireai-…` создаются и отзываются от имени аккаунта.
 ## Внутренние эндпоинты
 
 | Метод | Путь | Назначение |

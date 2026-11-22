@@ -85,10 +85,66 @@ function check(token) {
   }
 }
 
+function createApiKey(user) {
+  ensure();
+  const users = loadUsers();
+  const record = users[String(user).toLowerCase()];
+  if (!record) return null;
+  const entry = {
+    id: crypto.randomBytes(6).toString('hex'),
+    key: 'sk-fireai-' + crypto.randomBytes(20).toString('hex'),
+    createdAt: Date.now(),
+  };
+  record.apiKeys = record.apiKeys || [];
+  record.apiKeys.push(entry);
+  saveUsers(users);
+  return { id: entry.id, key: entry.key };
+}
+
+function listApiKeys(user) {
+  ensure();
+  const record = loadUsers()[String(user).toLowerCase()];
+  if (!record) return [];
+  return (record.apiKeys || []).map((k) => ({ id: k.id, key: k.key, createdAt: k.createdAt }));
+}
+
+function revokeApiKey(user, id) {
+  ensure();
+  const users = loadUsers();
+  const record = users[String(user).toLowerCase()];
+  if (!record || !record.apiKeys) return false;
+  const before = record.apiKeys.length;
+  record.apiKeys = record.apiKeys.filter((k) => k.id !== id);
+  if (record.apiKeys.length !== before) {
+    saveUsers(users);
+    return true;
+  }
+  return false;
+}
+
+function userFromApiKey(key) {
+  if (!key || !String(key).startsWith('sk-fireai-')) return null;
+  const users = loadUsers();
+  for (const [login, record] of Object.entries(users)) {
+    if ((record.apiKeys || []).some((k) => k.key === key)) return record.display;
+  }
+  return null;
+}
+
 function userFromRequest(req) {
   const header = req.headers.authorization || '';
   if (!header.startsWith('Bearer ')) return null;
   return check(header.slice(7).trim());
 }
 
-module.exports = { register, login, sign, check, userFromRequest };
+module.exports = {
+  register,
+  login,
+  sign,
+  check,
+  userFromRequest,
+  createApiKey,
+  listApiKeys,
+  revokeApiKey,
+  userFromApiKey,
+};

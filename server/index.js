@@ -14,6 +14,7 @@ const SEA_ASSETS = {
   '/index.html': 'public/index.html',
   '/style.css': 'public/style.css',
   '/app.js': 'public/app.js',
+  '/api.html': 'public/api.html',
 };
 const SEA_MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
 
@@ -27,7 +28,7 @@ const SEA_MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; chars
     }
   }
 })();
-const { streamChat, isDemo, MODEL, ACCESS_TOKEN, BASE_URL } = require('./core');
+const { streamChat, isDemo, answerStream, MODEL, ACCESS_TOKEN, BASE_URL } = require('./core');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,7 +54,10 @@ app.get('/api/status', (_req, res) => {
     provider: BASE_URL,
     ownApi: {
       endpoint: '/v1/chat/completions',
-      auth: ACCESS_TOKEN ? 'Authorization: Bearer <FIREAI_ACCESS_TOKEN>' : 'не требуется (локально)',
+      auth: 'Authorization: Bearer sk-fireai-… (ключ со страницы /api.html) или FIREAI_ACCESS_TOKEN',
+      docs: '/api.html',
+      models: '/v1/models',
+      streaming: true,
     },
   });
 });
@@ -80,6 +84,27 @@ app.get('/api/me', (req, res) => {
 
 app.post('/api/logout', (_req, res) => res.json({ ok: true }));
 
+app.get('/api/keys', (req, res) => {
+  const user = auth.userFromRequest(req);
+  if (!user) { res.status(401).json({ error: 'Требуется вход' }); return; }
+  res.json({ keys: auth.listApiKeys(user) });
+});
+
+app.post('/api/keys', (req, res) => {
+  const user = auth.userFromRequest(req);
+  if (!user) { res.status(401).json({ error: 'Требуется вход' }); return; }
+  const created = auth.createApiKey(user);
+  if (!created) { res.status(500).json({ error: 'Не удалось создать ключ' }); return; }
+  res.json(created);
+});
+
+app.delete('/api/keys/:id', (req, res) => {
+  const user = auth.userFromRequest(req);
+  if (!user) { res.status(401).json({ error: 'Требуется вход' }); return; }
+  const ok = auth.revokeApiKey(user, req.params.id);
+  res.json(ok ? { ok: true } : { error: 'Ключ не найден' });
+});
+
 app.post('/api/chat', (req, res, next) => {
   const user = auth.userFromRequest(req);
   if (!user) { res.status(401).json({ error: 'Требуется вход' }); return; }
@@ -100,47 +125,84 @@ app.post('/api/chat', async (req, res) => {
   await streamChat(res, clean);
 });
 
-const requireToken = (req, res, next) => {
-  if (!ACCESS_TOKEN) return next();
+const v1User = (req) => {
   const header = req.headers.authorization || '';
-  if (header === `Bearer ${ACCESS_TOKEN}`) return next();
-  res.status(401).json({ error: { message: 'Неверный FIREAI_ACCESS_TOKEN', type: 'auth_error' } });
+  if (!header.startsWith('Bearer ')) return null;
+  const token = header.slice(7).trim();
+  if (ACCESS_TOKEN && token === ACCESS_TOKEN) return 'admin';
+  return auth.check(token) || auth.userFromApiKey(token);
 };
 
-app.post('/v1/chat/completions', requireToken, async (req, res) => {
-  const messages = Array.isArray(req.body && req.body.messages) ? req.body.messages : [];
+app.get('/v1/models', (req, res) => {
+  if (!v1User(req)) {
+    res.status(401).json({ error: { message: 'Требуется API-ключ', type: 'auth_error' } });
+    return;
+  }
+  const model = isDemo() ? 'fireai-demo' : MODEL;
+  res.json({ object: 'list', data: [{ id: model, object: 'model', owned_by: 'fireai' }] });
+});
+
+app.post('/v1/chat/completions', async (req, res) => {
+  const user = v1User(req);
+  if (!user) {
+    res.status(401).json({ error: { message: 'Требуется API-ключ (Bearer sk-fireai-…)', type: 'auth_error' } });
+    return;
+  }
+  if (!Array.isArray(req.body && req.body.messages)) {
+    res.status(400).json({ error: { message: 'Нужен массив messages', type: 'invalid_request_error' } });
+    return;
+  }
+  const messages = req.body.messages;
+  const model = isDemo() ? 'fireai-demo' : MODEL;
+  const created = Math.floor(Date.now() / 1000);
 
   try {
-    const upstream = await fetch(`${BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(process.env.FIREAI_API_KEY ? { Authorization: `Bearer ${process.env.FIREAI_API_KEY}` } : {}),
-      },
-      body: JSON.stringify({ model: req.body.model || MODEL, messages, stream: false }),
-    });
-    const data = await upstream.json();
-
-    if (isDemo()) {
+    if (req.body.stream) {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      });
+      const chunk = (delta, finish) =>
+        res.write(
+          'data: ' +
+            JSON.stringify({
+              id: 'chatcmpl-' + created,
+              object: 'chat.completion.chunk',
+              created,
+              model,
+              choices: [{ index: 0, delta, finish_reason: finish }],
+            }) +
+            '\n\n',
+        );
+      chunk({ role: 'assistant' }, null);
+      let full = '';
+      for await (const token of answerStream(messages)) {
+        full += token;
+        chunk({ content: token }, null);
+      }
+      if (!full) chunk({ content: ' ' }, null);
+      chunk({}, 'stop');
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } else {
+      let full = '';
+      for await (const token of answerStream(messages)) full += token;
       res.json({
-        id: `fireai-${Date.now()}`,
+        id: 'chatcmpl-' + created,
         object: 'chat.completion',
-        created: Math.floor(Date.now() / 1000),
-        model: 'fireai-demo',
-        choices: [
-          {
-            index: 0,
-            message: { role: 'assistant', content: require('./demo-engine').generate(messages) },
-            finish_reason: 'stop',
-          },
-        ],
+        created,
+        model,
+        choices: [{ index: 0, message: { role: 'assistant', content: full || ' ' }, finish_reason: 'stop' }],
         usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
       });
-      return;
     }
-    res.status(upstream.status).json(data);
   } catch (err) {
-    res.status(502).json({ error: { message: String((err && err.message) || err), type: 'upstream_error' } });
+    if (!res.headersSent) {
+      res.status(502).json({ error: { message: String((err && err.message) || err), type: 'upstream_error' } });
+    } else {
+      res.end();
+    }
   }
 });
 

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FireAI — API</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🔥</text></svg>">
+<link rel="stylesheet" href="style.css">
+<style>
+.wrap { max-width: 780px; margin: 0 auto; padding: 30px 16px 60px; }
+h1 { display: flex; align-items: center; gap: 10px; }
+.sub { color: var(--text-dim); margin-top: -6px; }
+h2 { margin-top: 34px; border-top: 1px solid var(--border); padding-top: 22px; }
+.keys-box { background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.key-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: 13px; font-family: Consolas, monospace; }
+.key-row .k { flex: 1; overflow-x: auto; white-space: nowrap; }
+.btn {
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: 9px 16px; font-size: 14px; cursor: pointer; font-weight: 600;
+}
+.btn.ghost { background: var(--bg-hover); font-weight: 400; }
+.btn.small { font-size: 12px; padding: 5px 10px; }
+.btn:hover { filter: brightness(1.1); }
+.no-auth { padding: 40px 0; text-align: center; color: var(--text-dim); }
+code.inline { background: var(--bg-hover); padding: 2px 6px; border-radius: 5px; font-size: 13px; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔥 FireAI API</h1>
+  <p class="sub">OpenAI-совместимый API. Подключайте FireAI к любым клиентским библиотекам.</p>
+
+  <div id="noAuth" class="no-auth" style="display:none">
+    Чтобы управлять ключами, <a href="/">войдите в аккаунт</a> в основном приложении.
+  </div>
+
+  <h2>Ваши API-ключи</h2>
+  <div id="keysBox" class="keys-box" style="display:none">
+    <div id="keysList"></div>
+    <button id="createKey" class="btn" style="margin-top:10px">＋ Создать ключ</button>
+    <p class="sub" style="margin-top:10px; font-size:12px">Ключ даёт доступ к API от имени вашего аккаунта. Секрет показывается здесь же — храните его в безопасности.</p>
+  </div>
+
+  <h2>Быстрый старт</h2>
+  <p>Все запросы: <code class="inline">Authorization: Bearer sk-fireai-…</code></p>
+
+  <div class="codeblock"><div class="codeblock-head"><span>curl</span></div><pre>curl http://localhost:3000/v1/chat/completions \
+  -H "Authorization: Bearer sk-fireai-ВАШ_КЛЮЧ" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Привет!"}]
+  }'</pre></div>
+
+  <div class="codeblock"><div class="codeblock-head"><span>python (openai sdk)</span></div><pre>from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:3000/v1",
+    api_key="sk-fireai-ВАШ_КЛЮЧ",
+)
+
+response = client.chat.completions.create(
+    model="fireai-demo",
+    messages=[{"role": "user", "content": "Напиши песню"}],
+)
+print(response.choices[0].message.content)</pre></div>
+
+  <div class="codeblock"><div class="codeblock-head"><span>python — стриминг</span></div><pre>stream = client.chat.completions.create(
+    model="fireai-demo",
+    messages=[{"role": "user", "content": "Привет"}],
+    stream=True,
+)
+for chunk in stream:
+    piece = chunk.choices[0].delta.content
+    if piece:
+        print(piece, end="", flush=True)</pre></div>
+
+  <div class="codeblock"><div class="codeblock-head"><span>javascript</span></div><pre>const res = await fetch("http://localhost:3000/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: "Bearer sk-fireai-ВАШ_КЛЮЧ",
+  },
+  body: JSON.stringify({
+    messages: [{ role: "user", content: "Сделай 3D игру" }],
+    stream: false,
+  }),
+});
+const data = await res.json();
+console.log(data.choices[0].message.content);</pre></div>
+
+  <h2>Эндпоинты</h2>
+  <p><code class="inline">POST /v1/chat/completions</code> — чат-модель. Поле <code class="inline">stream: true</code> включает SSE-стриминг в формате OpenAI.</p>
+  <p><code class="inline">GET /v1/models</code> — список доступных моделей.</p>
+
+  <p style="margin-top:40px"><a href="/">← Вернуться в FireAI</a></p>
+</div>
+
+<script>
+const el = (id) => document.getElementById(id);
+const storage = (() => {
+  try {
+    const t = '__fireai_test';
+    localStorage.setItem(t, t);
+    localStorage.removeItem(t);
+    return localStorage;
+  } catch (_) {
+    const mem = new Map();
+    return {
+      getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+      setItem: (k, v) => mem.set(k, String(v)),
+      removeItem: (k) => mem.delete(k),
+    };
+  }
+})();
+
+function authHeaders() {
+  const t = storage.getItem('fireai.token');
+  return t ? { Authorization: 'Bearer ' + t } : {};
+}
+
+async function loadKeys() {
+  const r = await fetch('/api/keys', { headers: authHeaders() });
+  if (r.status === 401) {
+    el('noAuth').style.display = 'block';
+    el('keysBox').style.display = 'none';
+    return;
+  }
+  el('noAuth').style.display = 'none';
+  el('keysBox').style.display = 'block';
+  const { keys } = await r.json();
+  const list = el('keysList');
+  list.innerHTML = '';
+  if (!keys.length) list.innerHTML = '<p class="sub">Пока нет ключей — создайте первый.</p>';
+  for (const k of keys) {
+    const row = document.createElement('div');
+    row.className = 'key-row';
+    row.innerHTML =
+      '<span class="k">' + k.key.slice(0, 18) + '…' + k.key.slice(-4) + '</span>';
+    const copy = document.createElement('button');
+    copy.className = 'btn ghost small';
+    copy.textContent = 'Копировать';
+    copy.onclick = () => {
+      try { navigator.clipboard && navigator.clipboard.writeText(k.key); } catch (_) {}
+      copy.textContent = '✓';
+      setTimeout(() => (copy.textContent = 'Копировать'), 1200);
+    };
+    const del = document.createElement('button');
+    del.className = 'btn ghost small';
+    del.textContent = 'Отозвать';
+    del.onclick = async () => {
+      await fetch('/api/keys/' + k.id, { method: 'DELETE', headers: authHeaders() });
+      loadKeys();
+    };
+    row.append(copy, del);
+    list.appendChild(row);
+  }
+}
+
+el('createKey').onclick = async () => {
+  const r = await fetch('/api/keys', { method: 'POST', headers: authHeaders() });
+  if (r.ok) loadKeys();
+};
+
+loadKeys();
+</script>
+</body>
+</html>

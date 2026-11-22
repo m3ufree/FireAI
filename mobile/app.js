@@ -36,7 +36,8 @@
     storage.removeItem('fireai.user');
     ME = '';
     renderBadge();
-  ensureServerAuth();
+    el('apiDocsLink').style.display = SERVER ? 'block' : 'none';
+    el('apiDocsLink').href = SERVER + '/api.html';
     renderUser();
     ensureServerAuth();
     $sidebar.classList.add('collapsed');

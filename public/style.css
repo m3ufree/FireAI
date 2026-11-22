@@ -404,3 +404,12 @@ body { display: flex; }
   padding: 2px 10px 4px;
 }
 .logout-btn:hover { color: var(--accent); }
+
+.api-link {
+  display: block;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  text-decoration: none;
+  padding: 8px 10px 2px;
+}
+.api-link:hover { color: var(--accent); }
