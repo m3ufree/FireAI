@@ -87,7 +87,7 @@
         const nl = parts[i].indexOf('\n');
         const lang = nl === -1 ? '' : parts[i].slice(0, nl).trim();
         const code = nl === -1 ? parts[i] : parts[i].slice(nl + 1);
-        html += `<div class="codeblock"><div class="codeblock-head"><span>${escapeHtml(lang || 'код')}</span><button class="copy-btn">Копировать</button></div><pre>${escapeHtml(code.replace(/\n$/, ''))}</pre></div>`;
+        html += codeblockHtml(lang, code);
       } else {
         let t = escapeHtml(parts[i]);
         t = t.replace(/^### (.*)$/gm, '<h3>$1</h3>')
@@ -108,17 +108,60 @@
     return html;
   }
 
-  function bindCopyButtons(root) {
+
+  function codeblockHtml(lang, code) {
+    const langKey = (lang || '').trim().toLowerCase();
+    const isHtml = langKey === 'html' || langKey === 'htm';
+    const tooLong = code.length > 1200;
+    const shown = tooLong ? code.slice(0, 1200) : code;
+    const preview = escapeHtml(shown) + (tooLong ? '\n… код длинный — нажмите «Показать весь код»' : '');
+    const runBtn = isHtml ? '<button class="run-btn">▶ Запустить</button>' : '';
+    const moreBtn = tooLong ? '<button class="more-btn">Показать весь код</button>' : '';
+    const full = encodeURIComponent(code.replace(/\n$/, ''));
+    return '<div class="codeblock"' +
+      ' data-full="' + full + '">' +
+      '<div class="codeblock-head"><span>' + escapeHtml(lang || 'код') + '</span>' +
+      '<span class="head-actions">' + runBtn + moreBtn +
+      '<button class="copy-btn">Копировать</button></span></div>' +
+      '<pre>' + preview + '</pre></div>';
+  }
+
+  function bindCodeActions(root) {
     root.querySelectorAll('.copy-btn').forEach((btn) => {
       btn.onclick = () => {
-        const code = btn.closest('.codeblock').querySelector('pre').textContent;
-        navigator.clipboard.writeText(code).then(() => {
-          btn.textContent = 'Скопировано ✓';
-          setTimeout(() => (btn.textContent = 'Копировать'), 1500);
-        });
+        const cb = btn.closest('.codeblock');
+        const code = cb.getAttribute('data-full') ? decodeURIComponent(cb.getAttribute('data-full')) : cb.querySelector('pre').textContent;
+        try { navigator.clipboard && navigator.clipboard.writeText(code); } catch (_) {}
+        btn.textContent = '✓';
+        setTimeout(() => (btn.textContent = 'Копировать'), 1200);
+      };
+    });
+    root.querySelectorAll('.more-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const cb = btn.closest('.codeblock');
+        cb.querySelector('pre').textContent = decodeURIComponent(cb.getAttribute('data-full'));
+        btn.remove();
+      };
+    });
+    root.querySelectorAll('.run-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const cb = btn.closest('.codeblock');
+        let ov = document.querySelector('.run-overlay');
+        if (!ov) {
+          ov = document.createElement('div');
+          ov.className = 'run-overlay';
+          ov.innerHTML = '<div class="run-bar"><button class="run-close">✕ Закрыть</button></div><iframe class="run-frame" sandbox="allow-scripts"></iframe>';
+          document.body.appendChild(ov);
+          ov.querySelector('.run-close').onclick = () => ov.remove();
+        }
+        const frame = ov.querySelector('iframe');
+        frame.srcdoc = decodeURIComponent(cb.getAttribute('data-full'));
+        ov.classList.add('open');
       };
     });
   }
+
+  const bindCopyButtons = bindCodeActions;
 
   function renderMessages() {
     const chat = currentChat();
@@ -213,6 +256,7 @@
       }
 
       chat.messages.push({ role: 'assistant', content: full });
+      bindCodeActions(node.bubble);
       save();
     } catch (err) {
       node.bubble.innerHTML = `<div class="error-box">⚠️ ${escapeHtml(String(err.message || err))}</div>`;

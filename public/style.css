@@ -288,3 +288,40 @@ body { display: flex; }
   .sidebar:not(.collapsed) { box-shadow: 0 0 40px rgba(0,0,0,0.6); }
   .welcome { padding-top: 4vh; }
 }
+
+/* ---------- Code actions & run overlay ---------- */
+.head-actions { display: flex; gap: 6px; align-items: center; }
+.run-btn, .more-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.run-btn:hover, .more-btn:hover { color: var(--text); border-color: var(--accent); }
+.run-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  flex-direction: column;
+}
+.run-overlay.open { display: flex; }
+.run-bar {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-sidebar);
+}
+.run-close {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.run-frame { flex: 1; width: 100%; border: none; background: #fff; }
