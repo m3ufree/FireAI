@@ -13,6 +13,8 @@
   <button id="newChat" class="new-chat">＋ Новый чат</button>
   <nav id="chatList" class="chat-list"></nav>
   <div class="sidebar-footer">
+    <div id="userBadge" class="user-badge" style="display:none"></div>
+    <button id="logoutBtn" class="logout-btn" style="display:none">Выйти</button>
     <span id="modeBadge" class="mode-badge">…</span>
   </div>
 </aside>
@@ -47,6 +49,19 @@
   </footer>
 </main>
 
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">🔥</div>
+    <h2>Вход в FireAI</h2>
+    <p class="auth-sub">Аккаунт хранит историю чатов на этом устройстве</p>
+    <input id="authLogin" placeholder="Логин" autocomplete="username">
+    <input id="authPassword" type="password" placeholder="Пароль" autocomplete="current-password">
+    <div id="authError" class="auth-error"></div>
+    <button id="authLoginBtn" class="auth-btn">Войти</button>
+    <button id="authRegisterBtn" class="auth-btn secondary">Создать аккаунт</button>
+    <button id="authSkip" class="auth-skip">Продолжить без входа</button>
+  </div>
+</div>
 <script src="app.js"></script>
 </body>
 </html>

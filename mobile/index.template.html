@@ -27,6 +27,8 @@
   <nav id="chatList" class="chat-list"></nav>
   <div class="sidebar-footer">
     <span id="modeBadge" class="mode-badge demo">офлайн · демо</span>
+    <div id="userBadge" class="user-badge" style="display:none"></div>
+    <button id="logoutBtn" class="logout-btn" style="display:none">Выйти</button>
     <div class="server-setting">
       <input id="serverUrl" type="url" placeholder="URL сервера (необязательно)">
       <button id="saveServer" class="copy-btn">Сохр.</button>
@@ -64,6 +66,19 @@
   </footer>
 </main>
 
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">🔥</div>
+    <h2>Вход в FireAI</h2>
+    <p class="auth-sub">Аккаунт нужен при подключении сервера</p>
+    <input id="authLogin" placeholder="Логин" autocomplete="username">
+    <input id="authPassword" type="password" placeholder="Пароль" autocomplete="current-password">
+    <div id="authError" class="auth-error"></div>
+    <button id="authLoginBtn" class="auth-btn">Войти</button>
+    <button id="authRegisterBtn" class="auth-btn secondary">Создать аккаунт</button>
+    <button id="authSkip" class="auth-skip">Продолжить без входа</button>
+  </div>
+</div>
 <script>
 {{ENGINE}}
 </script>

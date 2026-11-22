@@ -25,23 +25,25 @@
   const $modeBadge = el('modeBadge');
   const $sidebar = document.querySelector('.sidebar');
 
-  const LS_CHATS = 'fireai.chats.v1';
-  const LS_CURRENT = 'fireai.current.v1';
+  const LS_CHATS = 'fireai.chats';
+  const LS_CURRENT = 'fireai.current';
+  const kk = (b) => (ME ? `${b}.${ME}.v1` : `${b}.v1`);
 
+  let ME = '';
   let chats = load();
-  let currentId = storage.getItem(LS_CURRENT);
+  let currentId = storage.getItem(kk(LS_CURRENT));
 
   function load() {
     try {
-      const parsed = JSON.parse(storage.getItem(LS_CHATS));
+      const parsed = JSON.parse(storage.getItem(kk(LS_CHATS)));
       return Array.isArray(parsed) ? parsed : [];
     } catch (_) {
       return [];
     }
   }
   const save = () => {
-    storage.setItem(LS_CHATS, JSON.stringify(chats));
-    storage.setItem(LS_CURRENT, currentId || '');
+    storage.setItem(kk(LS_CHATS), JSON.stringify(chats));
+    storage.setItem(kk(LS_CURRENT), currentId || '');
   };
 
   function currentChat() {
@@ -222,9 +224,15 @@
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ messages: chat.messages }),
       });
+      if (res.status === 401) {
+        ME = '';
+        renderUser();
+        showAuth('Нужно войти в аккаунт');
+        throw new Error('Нужно войти в аккаунт');
+      }
       if (!res.ok || !res.body) throw new Error('Сервер ответил ' + res.status);
 
       const reader = res.body.getReader();
@@ -298,6 +306,88 @@
       $modeBadge.className = 'mode-badge ' + status.mode;
     } catch (_) {
       $modeBadge.textContent = 'офлайн';
+    }
+  })();
+
+  function authHeaders() {
+    const t = storage.getItem('fireai.token');
+    return t ? { Authorization: 'Bearer ' + t } : {};
+  }
+  const $auth = el('authOverlay');
+  function showAuth(err) {
+    el('authError').textContent = err || '';
+    $auth.classList.add('open');
+  }
+  function hideAuth() { $auth.classList.remove('open'); }
+  function renderUser() {
+    const b = el('userBadge'), l = el('logoutBtn');
+    if (ME) { b.style.display = 'block'; b.textContent = '👤 ' + ME; l.style.display = 'block'; }
+    else { b.style.display = 'none'; l.style.display = 'none'; }
+  }
+  async function tryAuth(registerMode) {
+    const login = el('authLogin').value.trim();
+    const password = el('authPassword').value;
+    if (!login || !password) return showAuth('Введите логин и пароль');
+    try {
+      const r = await fetch('/api/' + (registerMode ? 'register' : 'login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) return showAuth(d.error || 'Ошибка входа');
+      storage.setItem('fireai.token', d.token);
+      storage.setItem('fireai.user', d.user);
+      ME = d.user;
+      hideAuth();
+      renderUser();
+      chats = load();
+      currentId = storage.getItem(kk(LS_CURRENT));
+      if (chats.length === 0) newChat();
+      else { renderSidebar(); renderMessages(); }
+    } catch (_) {
+      showAuth('Сервер недоступен');
+    }
+  }
+  el('authLoginBtn').onclick = () => tryAuth(false);
+  el('authRegisterBtn').onclick = () => tryAuth(true);
+  el('authSkip').onclick = () => {
+    ME = '';
+    storage.removeItem('fireai.token');
+    storage.removeItem('fireai.user');
+    hideAuth();
+    renderUser();
+    chats = load();
+    if (chats.length === 0) newChat();
+    else { renderSidebar(); renderMessages(); }
+  };
+  el('logoutBtn').onclick = async () => {
+    try { await fetch('/api/logout', { method: 'POST', headers: authHeaders() }); } catch (_) {}
+    storage.removeItem('fireai.token');
+    storage.removeItem('fireai.user');
+    ME = '';
+    renderUser();
+    chats = load();
+    if (chats.length === 0) newChat();
+    else { renderSidebar(); renderMessages(); }
+    showAuth('Вошли как гость — войдите, чтобы вернуть историю');
+  };
+
+  (async () => {
+    const t = storage.getItem('fireai.token');
+    if (t) {
+      try {
+        const r = await fetch('/api/me', { headers: authHeaders() });
+        if (r.ok) { ME = (await r.json()).user; renderUser(); }
+        else {
+          storage.removeItem('fireai.token');
+          showAuth('Сессия истекла — войдите заново');
+        }
+      } catch (_) {
+        /* сервер пока офлайн */
+      }
+    } else {
+      showAuth();
     }
   })();
 

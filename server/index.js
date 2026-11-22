@@ -1,6 +1,21 @@
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
+const auth = require('./auth');
+
+let sea = null;
+try {
+  const nodeSea = require('node:sea');
+  if (nodeSea.isSea()) sea = nodeSea;
+} catch (_) { /* не SEA-сборка */ }
+
+const SEA_ASSETS = {
+  '/': 'public/index.html',
+  '/index.html': 'public/index.html',
+  '/style.css': 'public/style.css',
+  '/app.js': 'public/app.js',
+};
+const SEA_MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
 
 (function loadEnv() {
   const envPath = path.join(__dirname, '..', '.env');
@@ -18,7 +33,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+
+if (sea) {
+  app.get(Object.keys(SEA_ASSETS), (req, res) => {
+    const key = SEA_ASSETS[req.path];
+    const ext = path.extname(key);
+    res.setHeader('Content-Type', SEA_MIME[ext] || 'application/octet-stream');
+    res.end(Buffer.from(sea.getAsset(key)));
+  });
+} else {
+  app.use(express.static(path.join(__dirname, '..', 'public')));
+}
 
 app.get('/api/status', (_req, res) => {
   res.json({
@@ -31,6 +56,34 @@ app.get('/api/status', (_req, res) => {
       auth: ACCESS_TOKEN ? 'Authorization: Bearer <FIREAI_ACCESS_TOKEN>' : 'не требуется (локально)',
     },
   });
+});
+
+app.post('/api/register', (req, res) => {
+  const { login, password } = req.body || {};
+  const result = auth.register(login, password);
+  if (result.error) { res.status(400).json({ error: result.error }); return; }
+  res.json({ token: auth.sign(result.user), user: result.user });
+});
+
+app.post('/api/login', (req, res) => {
+  const { login, password } = req.body || {};
+  const result = auth.login(login, password);
+  if (result.error) { res.status(401).json({ error: result.error }); return; }
+  res.json({ token: auth.sign(result.user), user: result.user });
+});
+
+app.get('/api/me', (req, res) => {
+  const user = auth.userFromRequest(req);
+  if (!user) { res.status(401).json({ error: 'Требуется вход' }); return; }
+  res.json({ user });
+});
+
+app.post('/api/logout', (_req, res) => res.json({ ok: true }));
+
+app.post('/api/chat', (req, res, next) => {
+  const user = auth.userFromRequest(req);
+  if (!user) { res.status(401).json({ error: 'Требуется вход' }); return; }
+  next();
 });
 
 app.post('/api/chat', async (req, res) => {

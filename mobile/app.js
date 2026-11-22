@@ -32,10 +32,93 @@
   el('saveServer').onclick = () => {
     SERVER = $serverUrl.value.trim().replace(/\/+$/, '');
     storage.setItem('fireai.server', SERVER);
+    storage.removeItem('fireai.token');
+    storage.removeItem('fireai.user');
+    ME = '';
     renderBadge();
+  ensureServerAuth();
+    renderUser();
+    ensureServerAuth();
     $sidebar.classList.add('collapsed');
   };
   el('toggleSidebar').onclick = () => $sidebar.classList.toggle('collapsed');
+
+  function authHeaders() {
+    const t = storage.getItem('fireai.token');
+    return t ? { Authorization: 'Bearer ' + t } : {};
+  }
+  const $auth = el('authOverlay');
+  function showAuth(err) {
+    el('authError').textContent = err || '';
+    $auth.classList.add('open');
+  }
+  function hideAuth() { $auth.classList.remove('open'); }
+  function renderUser() {
+    const b = el('userBadge'), l = el('logoutBtn');
+    if (ME && SERVER) { b.style.display = 'block'; b.textContent = '👤 ' + ME; l.style.display = 'block'; }
+    else { b.style.display = 'none'; l.style.display = 'none'; }
+  }
+  async function tryAuthServer(registerMode) {
+    const login = el('authLogin').value.trim();
+    const password = el('authPassword').value;
+    if (!login || !password) return showAuth('Введите логин и пароль');
+    try {
+      const r = await fetch(SERVER + '/api/' + (registerMode ? 'register' : 'login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) return showAuth(d.error || 'Ошибка входа');
+      storage.setItem('fireai.token', d.token);
+      storage.setItem('fireai.user', d.user);
+      ME = d.user;
+      hideAuth();
+      renderUser();
+      chats = load();
+      currentId = storage.getItem(kk(LS_CURRENT));
+      if (chats.length === 0) newChat();
+      else { renderSidebar(); renderMessages(); }
+    } catch (_) {
+      showAuth('Сервер недоступен');
+    }
+  }
+  el('authLoginBtn').onclick = () => tryAuthServer(false);
+  el('authRegisterBtn').onclick = () => tryAuthServer(true);
+  el('authSkip').onclick = () => { hideAuth(); };
+  el('logoutBtn').onclick = () => {
+    storage.removeItem('fireai.token');
+    storage.removeItem('fireai.user');
+    ME = '';
+    SERVER = '';
+    $serverUrl.value = '';
+    storage.setItem('fireai.server', '');
+    storage.removeItem(kk(LS_CURRENT));
+    renderBadge();
+    renderUser();
+    chats = load();
+    if (chats.length === 0) newChat();
+    else { renderSidebar(); renderMessages(); }
+  };
+  async function ensureServerAuth() {
+    if (!SERVER) { hideAuth(); return; }
+    const t = storage.getItem('fireai.token');
+    try {
+      const r = await fetch(SERVER + '/api/me', { headers: authHeaders() });
+      if (r.ok) {
+        ME = (await r.json()).user;
+        renderUser();
+        hideAuth();
+      } else {
+        storage.removeItem('fireai.token');
+        ME = '';
+        renderUser();
+        showAuth('Для работы с сервером нужен вход');
+      }
+    } catch (_) {
+      hideAuth();
+    }
+  }
 
   function renderBadge() {
     if (!SERVER) {
@@ -47,14 +130,17 @@
     }
   }
 
-  const LS_CHATS = 'fireai.chats.v1';
-  const LS_CURRENT = 'fireai.current.v1';
+  const LS_CHATS = 'fireai.chats';
+  const LS_CURRENT = 'fireai.current';
+  const kk = (b) => (SERVER ? `${b}.${ME || 'guest'}.v1` : `${b}.${ME || 'guest'}.v1`);
+
+  let ME = '';
   let chats = load();
-  let currentId = storage.getItem(LS_CURRENT);
+  let currentId = storage.getItem(kk(LS_CURRENT));
 
   function load() {
     try {
-      const p = JSON.parse(storage.getItem(LS_CHATS));
+      const p = JSON.parse(storage.getItem(kk(LS_CHATS)));
       return Array.isArray(p) ? p : [];
     } catch (_) {
       return [];
@@ -236,9 +322,13 @@
       if (SERVER) {
         const res = await fetch(SERVER + '/api/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ messages: chat.messages }),
         });
+        if (res.status === 401) {
+          showAuth('Войдите в аккаунт на сервере');
+          throw new Error('Нужно войти в аккаунт');
+        }
         if (!res.ok || !res.body) throw new Error('Сервер ответил ' + res.status);
         const reader = res.body.getReader();
         const dec = new TextDecoder();
@@ -305,6 +395,7 @@
   $input.addEventListener('input', autosize);
 
   document.querySelectorAll('.suggestion').forEach((b) => (b.onclick = () => send(b.dataset.prompt)));
+  el('newChat').onclick = newChat;
   renderBadge();
 
   if (chats.length === 0) newChat();
