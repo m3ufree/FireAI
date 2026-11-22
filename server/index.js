@@ -15,6 +15,9 @@ const SEA_ASSETS = {
   '/style.css': 'public/style.css',
   '/app.js': 'public/app.js',
   '/api.html': 'public/api.html',
+  '/landing': 'public/landing.html',
+  '/landing.html': 'public/landing.html',
+  '/site': 'public/landing.html',
   '/secret.txt': 'public/secret.txt',
 };
 const SEA_MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
@@ -45,6 +48,8 @@ if (sea) {
   });
 } else {
   app.use(express.static(path.join(__dirname, '..', 'public')));
+  app.get(['/landing', '/landing.html', '/site'], (_req, res) =>
+    res.sendFile(path.join(__dirname, '..', 'public', 'landing.html')));
 }
 
 app.get('/api/status', (_req, res) => {
