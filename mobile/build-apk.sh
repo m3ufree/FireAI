@@ -13,6 +13,7 @@ mkdir -p "$BUILD/assets" "$BUILD/classes" "$BUILD/dex"
 
 node tools/gen-icon.js
 node tools/build-assets.js --out "$BUILD/assets/index.html"
+cp "$ROOT/../public/secret.txt" "$BUILD/assets/secret.txt"
 
 cd "$BUILD"
 aapt2 compile --dir "$ROOT/res" -o res.zip

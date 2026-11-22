@@ -15,6 +15,7 @@ const SEA_ASSETS = {
   '/style.css': 'public/style.css',
   '/app.js': 'public/app.js',
   '/api.html': 'public/api.html',
+  '/secret.txt': 'public/secret.txt',
 };
 const SEA_MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
 

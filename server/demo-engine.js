@@ -271,6 +271,9 @@ function generate(messages) {
     ].join('\n');
   }
 
+  if (/пасхалк|easter|secret|яйцо/i.test(prompt)) {
+    return '👀 Пасхалки? Кто-то тут любопытный...\n\nДам одну подсказку: загляни в файл **secret.txt** рядом с файлами приложения (или открой **/secret.txt** после адреса сервера). Больше не скажу. 🔥';
+  }
   if (/(3\s*d|3d|трейс|three|игру|game)/i.test(prompt)) return THREE_D_GAME;
   if (/(песн|song|музык|music|трек)/i.test(prompt)) return SONG;
 

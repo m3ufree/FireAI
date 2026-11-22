@@ -18,7 +18,8 @@ cat > "$DIST/sea-config.json" <<'JSON'
     "public/index.html": "public/index.html",
     "public/style.css": "public/style.css",
     "public/app.js": "public/app.js",
-    "public/api.html": "public/api.html"
+    "public/api.html": "public/api.html",
+    "public/secret.txt": "public/secret.txt"
   }
 }
 JSON
